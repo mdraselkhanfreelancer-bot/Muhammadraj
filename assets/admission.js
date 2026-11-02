@@ -79,15 +79,17 @@ function fitCopy(){var w=$('axcopy'),sc=w.querySelector('.pcsc');if(!sc)return;v
 window.addEventListener('resize',fitCopy);
 function loadJs(u){return new Promise(function(ok,no){var el=document.createElement('script');el.src=u;el.onload=ok;el.onerror=no;document.head.appendChild(el)})}
 function printCopy(){document.body.classList.add('pc');var off=function(){document.body.classList.remove('pc');window.removeEventListener('afterprint',off)};window.addEventListener('afterprint',off);setTimeout(function(){window.print();setTimeout(off,1500)},50)}
-function downloadPdf(){
-  var b=$('adpr'),old=b.textContent;b.disabled=true;b.textContent='…';
+function downloadForm(kind){
+  var b=kind==='jpg'?$('adjp'):$('adpr'),old=b.textContent;b.disabled=true;b.textContent='…';
   var host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;width:794px';host.className='pcopy';host.innerHTML=buildCopy(last);document.body.appendChild(host);
   Promise.all([window.html2canvas||loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),window.jspdf||loadJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')]).then(function(){
-    return html2canvas(host.firstChild,{scale:2,backgroundColor:'#ffffff',useCORS:true})
+    return html2canvas(host.firstChild,{scale:3,backgroundColor:'#ffffff',useCORS:true,width:794,height:1123})  /* A4 = 794 x 1123 px: JPG and PDF have the same size */
   }).then(function(cv){
+    var url=cv.toDataURL('image/jpeg',.95),name='Admission-Form-'+last.id;
+    if(kind==='jpg'){var a=document.createElement('a');a.href=url;a.download=name+'.jpg';document.body.appendChild(a);a.click();a.remove();return}
     var pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-    pdf.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,210,297);pdf.save('Admission-Form-'+last.id+'.pdf');
-  }).catch(function(){printCopy()}).then(function(){host.remove();b.disabled=false;b.textContent=old});
+    pdf.addImage(url,'JPEG',0,0,210,297);pdf.save(name+'.pdf');
+  }).catch(function(){if(kind!=='jpg')printCopy()}).then(function(){host.remove();b.disabled=false;b.textContent=old});
 }
 function renderOk(){
   if(!last)return;
@@ -130,7 +132,8 @@ f.addEventListener('submit',function(e){
   });
 });
 
-$('adpr').addEventListener('click',downloadPdf);
+$('adpr').addEventListener('click',function(){downloadForm('pdf')});
+$('adjp').addEventListener('click',function(){downloadForm('jpg')});
 /* copy ID */
 $('adcp').addEventListener('click',function(){
   var b=this,v=last?last.id:'';if(!v)return;
